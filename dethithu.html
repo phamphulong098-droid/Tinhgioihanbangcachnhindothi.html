@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ứng Dụng Trắc Nghiệm Tương Tác: Giới Hạn & Tính Liên Tục</title>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+    </script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+            font-size: 24px;
+        }
+
+        .lecturer {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            margin-bottom: 30px;
+        }
+
+        .quiz-stats {
+            display: flex;
+            justify-content: space-between;
+            background: #edf2f7;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-weight: bold;
+        }
+
+        .question-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            font-size: 12px;
+            border-radius: 4px;
+            color: #fff;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .badge-lythuyet { background-color: #9b59b6; }
+        .badge-de { background-color: var(--success-color); }
+        .badge-trungbinh { background-color: #f39c12; }
+        .badge-kho { background-color: var(--error-color); }
+
+        .question-text {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+        }
+
+        .options-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .option-item:hover:not(.disabled) {
+            background-color: #f0f4f8;
+            border-color: var(--secondary-color);
+        }
+
+        .option-item input {
+            margin-right: 12px;
+            transform: scale(1.2);
+            cursor: pointer;
+        }
+
+        /* Trạng thái đúng sai khi tương tác */
+        .option-item.correct {
+            background-color: #d4edda !important;
+            border-color: var(--success-color) !important;
+            color: #155724;
+            font-weight: bold;
+        }
+
+        .option-item.incorrect {
+            background-color: #f8d7da !important;
+            border-color: var(--error-color) !important;
+            color: #721c24;
+        }
+
+        .option-item.disabled {
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        .explanation-box {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #e8f4fd;
+            border-left: 5px solid var(--secondary-color);
+            border-radius: 4px;
+        }
+
+        .tip-box {
+            margin-top: 10px;
+            padding: 10px 12px;
+            background-color: #fff3cd;
+            border-left: 5px solid #ffc107;
+            border-radius: 4px;
+            font-style: italic;
+        }
+
+        .download-btn {
+            display: block;
+            width: 100%;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            margin-top: 30px;
+            text-decoration: none;
+            box-sizing: border-box;
+        }
+
+        .download-btn:hover {
+            background: #1a252f;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>ỨNG DỤNG TRẮC NGHIỆM TƯƠNG TÁC ĐỒ THỊ</h1>
+    <div class="lecturer">Học liệu xây dựng dựa trên bài giảng của Dr.rer.nat Duymt</div>
+
+    <div class="quiz-stats">
+        <span>Tiến độ: <span id="progress-text">0/20</span> câu</span>
+        <span>Điểm số: <span id="score-text">0</span>/20</span>
+    </div>
+
+    <div id="quiz-container">
+        </div>
+
+    <a href="#" id="downloadLink" class="download-btn" onclick="downloadApp()">📥 Tải file đề thi (.html) về máy của bạn</a>
+</div>
+
+<script>
+    // Ngân hàng dữ liệu gồm đúng 20 câu hỏi: 5 Lý thuyết, 5 Dễ, 5 Trung bình, 5 Khó
+    const quizData = [
+        // --- 5 CÂU LÝ THUYẾT ---
+        {
+            type: "lythuyet",
+            levelLabel: "Lý thuyết",
+            question: "Điều kiện cần và đủ để hàm số $f(x)$ tồn tại giới hạn hữu hạn kép $\\lim_{x \\to x_0} f(x) = L$ là gì?",
+            options: [
+                "$\\lim_{x \\to x_0^+} f(x) = L$ hoặc $\\lim_{x \\to x_0^-} f(x) = L$.",
+                "Hàm số phải xác định tại $x_0$, tức là phải tồn tại giá trị $f(x_0)$.",
+                "$\\lim_{x \\to x_0^+} f(x) = \\lim_{x \\to x_0^-} f(x) = L$.",
+                "Đồ thị hàm số không có vết đứt gãy nào trên toàn trục số."
+            ],
+            answer: 2,
+            explanation: "Theo định lý nền tảng về giới hạn một bên, giới hạn tại một điểm tồn tại khi và chỉ khi cả giới hạn trái và giới hạn phải cùng tồn tại và bằng nhau.",
+            tip: "Mẹo: Muốn xét giới hạn tổng quát, hãy kiểm tra 'hai mũi tên trái phải'. Nếu chúng gặp nhau tại một cao độ, giới hạn tồn tại!"
+        },
+        {
+            type: "lythuyet",
+            levelLabel: "Lý thuyết",
+            question: "Khi phát biểu '$x$ tiến tới $0^-$', điều này mô tả hành vi hình học nào trên trục số?",
+            options: [
+                "$x$ giảm dần từ các giá trị dương về $0$.",
+                "$x$ tăng dần từ các giá trị âm về $0$.",
+                "$x$ di chuyển từ bên phải sang bên trái của trục tung.",
+                "$x$ tiến thẳng từ vị trí vô cùng về vị trí có tung độ bằng $0$."
+            ],
+            answer: 1,
+            explanation: "Ký hiệu $x \\to x_0^-$ nghĩa là $x$ tiến về $x_0$ từ phía bên trái ($x < x_0$). Đối với $x \\to 0^-$, giá trị $x$ âm và tăng dần về $0$.",
+            tip: "Mẹo: Nhớ quy tắc dấu: Trừ ($-$) nghĩa là bé hơn, nằm bên trái; Cộng ($+$) nghĩa là lớn hơn, nằm bên phải."
+        },
+        {
+            type: "lythuyet",
+            levelLabel: "Lý thuyết",
+            question: "Hàm số $y = f(x)$ được định nghĩa là liên tục tại điểm $x_0$ khi thỏa mãn đồng thời các điều kiện nào?",
+            options: [
+                "Tồn tại $\\lim_{x \\to x_0} f(x)$ và tồn tại $f(x_0)$.",
+                "$\\lim_{x \\to x_0^+} f(x) = \\lim_{x \\to x_0^-} f(x)$.",
+                "Hàm số có giới hạn trái bằng giới hạn phải.",
+                "Hàm số xác định tại $x_0$, tồn tại giới hạn khi $x \\to x_0$ và $\\lim_{x \\to x_0} f(x) = f(x_0)$."
+            ],
+            answer: 3,
+            explanation: "Tính liên tục yêu cầu giá trị giới hạn khi đến gần phải khớp hoàn toàn với giá trị thực tế đục sẵn tại điểm đó.",
+            tip: "Mẹo: Liên tục tại điểm đòi hỏi 3 yếu tố vững chắc: Xác định $\\to$ Có giới hạn $\\to$ Hai giá trị đó bằng nhau."
+        },
+        {
+            type: "lythuyet",
+            levelLabel: "Lý thuyết",
+            question: "Trên đồ thị của một hàm số, một vị trí được ký hiệu bằng một 'chấm trắng tròn' (điểm thủng) biểu thị điều gì?",
+            options: [
+                "Hàm số chắc chắn không xác định tại điểm đó, hoặc giá trị tại đó bị nhảy sang điểm khác khiến hàm số mất tính liên tục.",
+                "Giới hạn trái và giới hạn phải tại điểm đó chắc chắn không bằng nhau.",
+                "Đồ thị tại đó cắt trục hoành.",
+                "Hàm số luôn bằng 0 tại điểm đó."
+            ],
+            answer: 0,
+            explanation: "Chấm trắng chỉ ra đồ thị bị thủng tại cao độ đó, tức là giá trị thực tế $f(x_0)$ không nằm trên đường liền mạch, báo hiệu sự gián đoạn.",
+            tip: "Mẹo: Thấy 'chấm trắng thủng' là thấy sự không liên tục (gián đoạn), không cần suy nghĩ nhiều!"
+        },
+        {
+            type: "lythuyet",
+            levelLabel: "Lý thuyết",
+            question: "Nếu $\\lim_{x \\to x_0^+} f(x) \\neq \\lim_{x \\to x_0^-} f(x)$, ta rút ra kết luận gì về tính liên tục của hàm số tại $x_0$?",
+            options: [
+                "Hàm số vẫn có thể liên tục nếu $f(x_0)$ bằng một trong hai giới hạn.",
+                "Hàm số không liên tục tại $x_0$ vì không tồn tại giới hạn tổng quát.",
+                "Hàm số liên tục bên phải tại điểm $x_0$.",
+                "Không thể kết luận khi chưa biết biểu thức công thức của hàm số."
+            ],
+            answer: 1,
+            explanation: "Vì hai giới hạn một bên khác nhau nên giới hạn tổng quát không tồn tại. Điều này vi phạm điều kiện cần của tính liên tục.",
+            tip: "Mẹo: Hai nhánh đồ thị bị đứt gãy rời nhau (lệch cao độ) thì hàm số luôn bị gián đoạn tại đó."
+        },
+
+        // --- 5 CÂU BÀI TẬP: DỄ ---
+        {
+            type: "de",
+            levelLabel: "Bài tập - Dễ",
+            question: "Dựa vào bài giảng của Dr.rer.nat Duymt, khi xét tại điểm $x = 1$, đồ thị của cả hai phía cùng hội tụ về cao độ nào?",
+            options: [
+                "Tung độ bằng 0.",
+                "Tung độ bằng 1.",
+                "Tung độ bằng 2.",
+                "Tung độ bằng -2."
+            ],
+            answer: 1,
+            explanation: "Bài giảng nêu rõ: 'Lim của $f(x)$ khi $x$ tiến tới 1 từ cả hai bên luôn là nó đều bằng nhau... Nó đều bằng 1. Đấy ta nhìn thấy ngay.'",
+            tip: "Mẹo: Tại $x=1$, đồ thị liền mạch, không có đứt gãy, dóng thẳng sang trục tung thu được kết quả nhanh chóng."
+        },
+        {
+            type: "de",
+            levelLabel: "Bài tập - Dễ",
+            question: "Theo đồ thị bài học, tính giới hạn phải khi $x$ tiến tới $0^+$ (tức $x$ giảm dần từ phần dương về 0):",
+            options: [
+                "$\\lim_{x \\to 0^+} f(x) = 0$",
+                "$\\lim_{x \\to 0^+} f(x) = -2$",
+                "$\\lim_{x \\to 0^+} f(x) = 2$",
+                "$\\lim_{x \\to 0^+} f(x) = 4$"
+            ],
+            answer: 2,
+            explanation: "Khi dóng song song với trục tung ở nhánh đồ thị nằm bên phải cạnh trục $Oy$, cao độ tiến sát về mức 2.",
+            tip: "Mẹo: Tiến tới $0^+$ là nhìn nhánh đồ thị sát sườn bên phải trục tung."
+        },
+        {
+            type: "de",
+            levelLabel: "Bài tập - Dễ",
+            question: "Giá trị của giới hạn trái $\\lim_{x \\to 0^-} f(x)$ trong đồ thị bài học bằng bao nhiêu?",
+            options: [
+                "0",
+                "2",
+                "-2",
+                "Vô cùng"
+            ],
+            answer: 0,
+            explanation: "Nhánh cong phía dưới trục hoành tiến sát về gốc tọa độ khi $x$ đi từ phía âm về 0. Do đó giới hạn trái bằng 0.",
+            tip: "Mẹo: Tiến tới $0^-$ là nhìn nhánh bên trái trục tung, thấy nó đâm thẳng vào gốc tọa độ $(0,0)$ nên giá trị bằng 0."
+        },
+        {
+            type: "de",
+            levelLabel: "Bài tập - Dễ",
+            question: "Tại điểm mút $x = 2$, bài giảng cho biết giới hạn phải $\\lim_{x \\to 2^+} f(x)$ có giá trị bằng bao nhiêu?",
+            options: [
+                "2",
+                "-2",
+                "0",
+                "Không tồn tại"
+            ],
+            answer: 2, // Đáp án tương ứng với vị trí số 2 (tức là giá trị 0)
+            options: ["-2", "2", "0", "4"],
+            answer: 2, // Vị trí giá trị 0
+            explanation: "Theo dữ kiện bài giảng: 'tiến tới $2^+$ thì sao? Nó bằng 0'. Nhánh đồ thị bên phải điểm 2 nằm ngay trên trục hoành.",
+            tip: "Mẹo: Điểm nằm ngay trên trục hoành thì luôn có tung độ (giá trị hàm số) bằng 0."
+        },
+        {
+            type: "de",
+            levelLabel: "Bài tập - Dễ",
+            question: "Tại điểm mút $x = 2$, bài giảng chỉ ra giới hạn trái $\\lim_{x \\to 2^-} f(x)$ bằng bao nhiêu?",
+            options: [
+                "0",
+                "2",
+                "-2",
+                "Vô cùng"
+            ],
+            answer: 2,
+            explanation: "Trích lời thầy Duymt: 'tiến tới $2^-$ nó bằng $-2$'. Do đó giới hạn trái tại điểm này bằng $-2$.",
+            tip: "Mẹo: Nhìn đồ thị đoạn bên trái $x=2$, thấy đầu mút đồ thị hạ thấp xuống ngang hàng với số $-2$ bên trục dọc."
+        },
+
+        // --- 5 CÂU BÀI TẬP: TRUNG BÌNH ---
+        {
+            type: "trungbinh",
+            levelLabel: "Bài tập - Trung bình",
+            question: "Kết luận nào sau đây về sự tồn tại của giới hạn tổng quát $\\lim_{x \\to 0} f(x)$ là chính xác?",
+            options: [
+                "$\\lim_{x \\to 0} f(x) = 1$",
+                "$\\lim_{x \\to 0} f(x)$ không tồn tại do giới hạn trái ($0$) khác giới hạn phải ($2$).",
+                "$\\lim_{x \\to 0} f(x) = 2$",
+                "$\\lim_{x \\to 0} f(x) = 0$"
+            ],
+            answer: 1,
+            explanation: "Vì $\\lim_{x \\to 0^+} f(x) = 2 \\neq \\lim_{x \\to 0^-} f(x) = 0$, giới hạn hai bên lệch nhau nên không tồn tại giới hạn tổng quát.",
+            tip: "Mẹo: Đồ thị bị đứt rời nhảy bậc tại điểm nào thì chắc chắn không tồn tại giới hạn tại điểm đó."
+        },
+        {
+            type: "trungbinh",
+            levelLabel: "Bài tập - Trung bình",
+            question: "Xét tại điểm $x = 1$, hàm số $f(x)$ có liên tục không? Tại sao?",
+            options: [
+                "Không liên tục vì đồ thị bị đổi hướng.",
+                "Không liên tục vì không có chấm trắng.",
+                "Liên tục vì giới hạn trái bằng giới hạn phải và bằng giá trị hàm số tại đó (đồ thị liền mạch).",
+                "Liên tục vì giới hạn tại đó bằng 0."
+            ],
+            answer: 2,
+            explanation: "Tại $x=1$, cả hai nhánh đồ thị chụm lại liền nét, giới hạn bằng 1, hàm số không bị đứt đoạn hay lồi lõm lỗ thủng nên liên tục.",
+            tip: "Mẹo: Vẽ nét bút qua điểm $x=1$ mà tay di chuyển trơn tru không phải nhấc bút lên $\\to$ Hàm số liên tục!"
+        },
+        {
+            type: "trungbinh",
+            levelLabel: "Bài tập - Trung bình",
+            question: "Tại điểm $x = 2$, hàm số $f(x)$ không liên tục vì lý do cụ thể nào?",
+            options: [
+                "Do hàm số không xác định tại $x = 2$.",
+                "Do giới hạn trái ($-2$) khác giới hạn phải ($0$), dẫn đến không tồn tại giới hạn tổng quát tại 2.",
+                "Do đồ thị đi xuyên qua trục hoành.",
+                "Do giá trị hàm số tiến về dương vô cùng."
+            ],
+            answer: 1,
+            explanation: "Giới hạn trái bằng $-2$ còn giới hạn phải bằng $0$. Hai giới hạn một bên lệch nhau làm giới hạn tổng quát biến mất, gây ra gián đoạn.",
+            tip: "Mẹo: Thấy đồ thị tại vị trí đứng $x=2$ có một khoảng trống hở dọc giữa hai nhánh $\\to$ Gián đoạn do nhảy bậc."
+        },
+        {
+            type: "trungbinh",
+            levelLabel: "Bài tập - Trung bình",
+            question: "Tại vị trí $x = 4$, giới hạn tổng quát $\\lim_{x \\to 4} f(x)$ bằng bao nhiêu theo phân tích bài học?",
+            options: [
+                "Không tồn tại.",
+                "Bằng vô cùng.",
+                "Bằng 4.",
+                "Bằng 0."
+            ],
+            answer: 2,
+            explanation: "Mặc dù có chấm trắng biểu thị điểm thủng, cả nhánh trái và nhánh phải của đồ thị khi tiến sát đến $x=4$ đều hướng về cùng một cao độ là 4.",
+            tip: "Mẹo: Điểm thủng tròn không ảnh hưởng đến giới hạn! Chỉ cần hai đầu đường thẳng chĩa vào cùng một lỗ, giới hạn chính là tọa độ cái lỗ đó."
+        },
+        {
+            type: "trungbinh",
+            levelLabel: "Bài tập - Trung bình",
+            question: "Cho biết hành vi của đồ thị tại điểm $x = 4$ liên quan đến ký hiệu chấm trắng:",
+            options: [
+                "Hàm số liên tục tuyệt đối tại $x = 4$.",
+                "Đồ thị bị đứt gãy thành hai hướng xa nhau.",
+                "Đồ thị có điểm thủng, đường vẽ xuyên qua vị trí này tiến tới vô cùng, dẫn tới giá trị hàm số $f(4)$ không bằng giá trị giới hạn.",
+                "Hàm số đồng biến trên toàn bộ khoảng chứa điểm 4."
+            ],
+            answer: 2,
+            explanation: "Chấm trắng nghĩa là đồ thị bị đục lỗ tại cao độ đó, bài giảng nêu: 'nó xuyên qua đường thẳng đó luôn... không bằng $f(4)$... nên tại 4 hàm không liên tục.'",
+            tip: "Mẹo: Giới hạn tồn tại ($=4$) nhưng không bằng giá trị hàm số thực tế tạo nên kiểu gián đoạn khử được (điểm thủng)."
+        },
+
+        // --- 5 CÂU BÀI TẬP: KHÓ ---
+        {
+            type: "kho",
+            levelLabel: "Bài tập - Khó",
+            question: "Tổng số điểm gián đoạn (không liên tục) của hàm số được khảo sát trong toàn bộ đồ thị bài giảng là bao nhiêu?",
+            options: [
+                "1 điểm",
+                "2 điểm",
+                "3 điểm",
+                "4 điểm"
+            ],
+            answer: 2,
+            explanation: "Thầy Duymt chốt lại ở cuối bài: 'Như vậy chốt lại là những cái điểm mà hàm số không liên tục đó là điểm $x = 4$, $x = 2$ và $x = 0$ làm cho hàm số không liên tục.' Tổng cộng có 3 điểm.",
+            tip: "Mẹo: Gom hết tất cả những chỗ có hiện tượng đứt khúc rời rạc hoặc đục lỗ trên trục hoành: gồm các tọa độ 0, 2, 4."
+        },
+        {
+            type: "kho",
+            levelLabel: "Bài tập - Khó",
+            question: "Sự khác biệt bản chất giữa điểm gián đoạn tại $x = 0$ và điểm gián đoạn tại $x = 4$ trên đồ thị là gì?",
+            options: [
+                "Tại $x=0$ tồn tại giới hạn tổng quát, còn tại $x=4$ thì không.",
+                "Tại $x=0$ đồ thị liền mạch, tại $x=4$ đồ thị nhảy bậc.",
+                "Tại $x=0$ gián đoạn do giới hạn trái/phải khác nhau (đứt gãy); tại $x=4$ giới hạn hai bên bằng nhau nhưng khác giá trị hàm số tại điểm đó (điểm thủng).",
+                "Không có sự khác biệt nào về mặt hình học."
+            ],
+            answer: 2,
+            explanation: "Tại $x=0$, hai nhánh lệch hẳn nhau về độ cao (2 và 0). Tại $x=4$, hai nhánh chụm chung vào một điểm nhưng điểm đó bị rỗng (chấm trắng).",
+            tip: "Mẹo: Nhảy bậc (Đứt gãy) $\\to$ Không có giới hạn. Thủng lỗ $\\to$ Có giới hạn nhưng không bằng $f(x_0)$."
+        },
+        {
+            type: "kho",
+            levelLabel: "Bài tập - Khó",
+            question: "Giả sử ta định nghĩa lại hàm số tại điểm thủng bằng cách điền đầy dấu chấm trắng tại $x=4$ sao cho $f(4) = 4$. Khẳng định nào sau đây đúng?",
+            options: [
+                "Hàm số vẫn gián đoạn tại $x = 4$.",
+                "Hàm số trở nên liên tục tại $x = 4$.",
+                "Hàm số sẽ bị gián đoạn tại cả điểm $x = 1$.",
+                "Giới hạn $\\lim_{x \\to 4} f(x)$ sẽ thay đổi giá trị thành vô cùng."
+            ],
+            answer: 1,
+            explanation: "Nếu điền đầy chấm trắng, ta có $\\lim_{x \\to 4} f(x) = f(4) = 4$. Lúc này cả 3 điều kiện liên tục được thỏa mãn, biến điểm gián đoạn thành điểm liên tục.",
+            tip: "Mẹo: Vá lại điểm thủng trên đồ thị giúp đồ thị trở nên liền mạch không tì vết."
+        },
+        {
+            type: "kho",
+            levelLabel: "Bài tập - Khó",
+            question: "Xét biểu thức $S$ là tổng các giới hạn phải tại các điểm khảo sát: $S = \\lim_{x \\to 0^+} f(x) + \\lim_{x \\to 2^+} f(x) + \\lim_{x \\to 4^+} f(x)$. Giá trị của $S$ là:",
+            options: [
+                "2",
+                "4",
+                "6",
+                "0"
+            ],
+            answer: 2,
+            explanation: "Dựa vào các kết quả tính toán từ đồ thị: $\\lim_{x \\to 0^+} f(x) = 2$, $\\lim_{x \\to 2^+} f(x) = 0$, và $\\lim_{x \\to 4^+} f(x) = 4$. Do đó $S = 2 + 0 + 4 = 6$.",
+            tip: "Mẹo: Đọc chuẩn các giới hạn bên PHẢI tại 3 mốc rồi cộng đại số lại với nhau."
+        },
+        {
+            type: "kho",
+            levelLabel: "Bài tập - Khó",
+            question: "Xét mệnh đề: '(I) Hàm số có giới hạn tổng quát tại $x=2$'; '(II) Hàm số có giới hạn tổng quát tại $x=4$'. Chọn nhận định đúng:",
+            options: [
+                "Cả (I) và (II) đều đúng.",
+                "Cả (I) và (II) đều sai.",
+                "(I) đúng, (II) sai.",
+                "(I) sai, (II) đúng."
+            ],
+            answer: 3,
+            explanation: "Tại $x=2$ giới hạn không tồn tại do hai bên lệch nhau ($-2 \\neq 0$) $\\to$ (I) sai. Tại $x=4$ giới hạn tồn tại và bằng 4 $\\to$ (II) đúng.",
+            tip: "Mẹo: Nhớ kỹ bản chất: Cứ chụm đầu vào một điểm (dù rỗng) là có giới hạn, cứ lệch cao độ ra là không có giới hạn."
+        }
+    ];
+
+    let userAnswers = {};
+    let score = 0;
+
+    // Hàm khởi tạo và hiển thị danh sách câu hỏi
+    function initQuiz() {
+        const container = document.getElementById('quiz-container');
+        container.innerHTML = '';
+
+        quizData.forEach((q, index) => {
+            const card = document.createElement('div');
+            card.className = 'question-card';
+            card.id = `q-card-${index}`;
+
+            // Tạo nhãn phân loại câu hỏi
+            let badgeClass = 'badge-lythuyet';
+            if (q.type === 'de') badgeClass = 'badge-de';
+            if (q.type === 'trungbinh') badgeClass = 'badge-trungbinh';
+            if (q.type === 'kho') badgeClass = 'badge-kho';
+
+            card.innerHTML = `
+                <span class="badge ${badgeClass}">${q.levelLabel}</span>
+                <div class="question-text">Câu ${index + 1}: ${q.question}</div>
+                <ul class="options-list">
+                    ${q.options.map((opt, optIdx) => `
+                        <li class="option-item" id="opt-${index}-${optIdx}" onclick="selectOption(${index}, ${optIdx})">
+                            <input type="radio" name="q-${index}" id="radio-${index}-${optIdx}" disabled>
+                            <label style="cursor:pointer; width:100%;">${opt}</label>
+                        </li>
+                    `).join('')}
+                </ul>
+                <div class="explanation-box" id="explain-${index}">
+                    <strong style="color:var(--primary-color);">💡 Lời giải chi tiết:</strong>
+                    <p>${q.explanation}</p>
+                    <div class="tip-box">
+                        <strong>⚡ Mẹo làm nhanh:</strong> ${q.tip}
+                    </div>
+                </div>
+            `;
+            container.innerHTML += card.innerHTML;
+        });
+
+        // Kích hoạt lại sự kiện click do gán innerHTML làm mất bind gốc
+        quizData.forEach((q, index) => {
+            q.options.forEach((opt, optIdx) => {
+                const item = document.getElementById(`opt-${index}-${optIdx}`);
+                item.onclick = () => selectOption(index, optIdx);
+            });
+        });
+
+        // Gọi MathJax biên dịch lại các công thức toán vừa chèn vào HTML
+        if (window.MathJax && window.MathJax.typeset) {
+            window.MathJax.typeset();
+        }
+    }
+
+    // Xử lý sự kiện khi người dùng chọn đáp án
+    function selectOption(qIdx, optIdx) {
+        // Nếu câu hỏi này đã được trả lời rồi thì khóa không cho chọn lại
+        if (userAnswers.hasOwnProperty(qIdx)) return;
+
+        userAnswers[qIdx] = optIdx;
+        const correctAns = quizData[qIdx].answer;
+
+        // Đánh dấu radio tương ứng
+        document.getElementById(`radio-${qIdx}-${optIdx}`).checked = true;
+
+        // Kiểm tra đúng sai để đổi màu nền trực quan
+        if (optIdx === correctAns) {
+            document.getElementById(`opt-${qIdx}-${optIdx}`).classList.add('correct');
+            score++;
+            document.getElementById('score-text').innerText = score;
+        } else {
+            document.getElementById(`opt-${qIdx}-${optIdx}`).classList.add('incorrect');
+            // Đồng thời hiển thị màu xanh cho đáp án đúng để đối chiếu
+            document.getElementById(`opt-${qIdx}-${correctAns}`).classList.add('correct');
+        }
+
+        // Khóa tất cả các lựa chọn khác của câu này
+        quizData[qIdx].options.forEach((_, i) => {
+            document.getElementById(`opt-${qIdx}-${i}`).classList.add('disabled');
+        });
+
+        // Cập nhật tiến độ tiến trình bài làm
+        const totalAnswered = Object.keys(userAnswers).length;
+        document.getElementById('progress-text').innerText = `${totalAnswered}/20`;
+
+        // Hiển thị hộp thoại giải thích và mẹo làm bài giải chi tiết
+        const explainBox = document.getElementById(`explain-${qIdx}`);
+        explainBox.style.display = 'block';
+
+        // Gọi lại MathJax để render công thức toán học phát sinh trong phần giải thích
+        if (window.MathJax && window.MathJax.typeset) {
+            window.MathJax.typeset();
+        }
+    }
+
+    // Hàm tạo tính năng cho phép người dùng tải ngược chính file này về máy tính cá nhân
+    function downloadApp() {
+        const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const link = document.getElementById('downloadLink');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'tracnghiem_gioihan_tuongtac.html';
+    }
+
+    // Chạy ứng dụng ngay khi trang tải xong
+    window.onload = initQuiz;
+</script>
+
+</body>
+</html>
